@@ -313,6 +313,12 @@ ModelState::ModelState(TRITONBACKEND_Model* triton_model)
                 //   THROW_IF_BACKEND_MODEL_ERROR(ParseUnsignedLongLongValue(
                 //       value_string,
                 //       &runtime_options_->trt_max_workspace_size));
+              } else if (param_key == "workspace_size") {
+                int max_workspace_size = 1 << 30;
+                THROW_IF_BACKEND_MODEL_ERROR(
+                    ParseIntValue(value_string, &max_workspace_size));
+                runtime_options_->trt_option.max_workspace_size =
+                    max_workspace_size;
               } else if (param_key == "cache_file") {
                 runtime_options_->trt_option.serialize_file = value_string;
               } else if (param_key == "use_paddle") {
@@ -1139,16 +1145,16 @@ TRITONSERVER_Error* ModelInstanceState::ReadOutputTensors(
     size_t total_batch_size, TRITONBACKEND_Request** requests,
     const uint32_t request_count,
     std::vector<TRITONBACKEND_Response*>* responses) {
-  // r22.03
-  // BackendOutputResponder responder(
-  //     requests, request_count, responses,
-  //     model_state_->TritonMemoryManager(), model_state_->MaxBatchSize() > 0,
-  //     model_state_->EnablePinnedOutput(), CudaStream());
-  // r21.10
+  // r22.12
   BackendOutputResponder responder(
-      requests, request_count, responses, StateForModel()->MaxBatchSize(),
-      StateForModel()->TritonMemoryManager(),
-      StateForModel()->EnablePinnedOutput(), CudaStream());
+      requests, request_count, responses,
+      model_state_->TritonMemoryManager(), model_state_->MaxBatchSize() > 0,
+      model_state_->EnablePinnedOutput(), CudaStream());
+  // r21.10
+  // BackendOutputResponder responder(
+  //     requests, request_count, responses, StateForModel()->MaxBatchSize(),
+  //     StateForModel()->TritonMemoryManager(),
+  //     StateForModel()->EnablePinnedOutput(), CudaStream());
 
   // Use to hold string output contents
   bool cuda_copy = false;
